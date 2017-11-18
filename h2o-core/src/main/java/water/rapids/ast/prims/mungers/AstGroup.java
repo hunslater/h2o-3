@@ -654,8 +654,8 @@ public class AstGroup extends AstPrimitive {
                       tempFrame.vec(0).at(midRow)) : tempFrame.vec(0).at(midRow);
               tempFrame.delete();
             }
-            oneG._medians[index] = medianVal;
             myFrame.delete();
+            oneG._medians[index] = medianVal;
           }
         }
       }
