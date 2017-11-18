@@ -632,34 +632,44 @@ public class AstGroup extends AstPrimitive {
     void close() {
       Futures fs = new Futures();
 
+      int cCount = 0;
+      Vec[] tempVgrps = new Vec[_medianCols];
       for (G oneG : _grps) {
         for (int index = 0; index < oneG._isMedian.length; index++) {
           if (oneG._isMedian[index]) {  // median action is needed
-
             // make a frame out of the NewChunk vector
-            Vec[] vgrps = new Vec[1];
-            vgrps[0] = _appendables[oneG._newChunkCols[index]].close(_appendables[oneG._newChunkCols[index]].compute_rowLayout(), fs);
-            Frame myFrame = new Frame(Key.<Frame>make(), vgrps, true);
-
-            // call sort on the frame to get the median as the middle value or mean of two middle values
-            long totalRows = myFrame.numRows();
-            double medianVal;
-
-            if (totalRows == 0) {
-              medianVal = Double.NaN;  // return NAN for empty frames.  Should not have happened!
-            } else {
-              long midRow = totalRows / 2;
-              Frame tempFrame = Merge.sort(myFrame, new int[]{0});
-              medianVal = totalRows % 2 == 0 ? 0.5 * (tempFrame.vec(0).at(midRow - 1) +
-                      tempFrame.vec(0).at(midRow)) : tempFrame.vec(0).at(midRow);
-              tempFrame.delete();
-            }
-            myFrame.delete();
-            oneG._medians[index] = medianVal;
+            tempVgrps[cCount++] = _appendables[oneG._newChunkCols[index]].close(_appendables[oneG._newChunkCols[index]].compute_rowLayout(), fs);
           }
         }
       }
       fs.blockForPending();
+
+      cCount = 0;
+      for (G oneG : _grps) {
+        for (int index = 0; index < oneG._isMedian.length; index++) {
+
+          Vec[] vgrps = new Vec[1];
+          vgrps[0] = tempVgrps[cCount++];
+          Frame myFrame = new Frame(Key.<Frame>make(), vgrps, true);
+
+          // call sort on the frame to get the median as the middle value or mean of two middle values
+          long totalRows = myFrame.numRows();
+          double medianVal;
+
+          if (totalRows == 0) {
+            medianVal = Double.NaN;  // return NAN for empty frames.  Should not have happened!
+          } else {
+            long midRow = totalRows / 2;
+            Frame tempFrame = Merge.sort(myFrame, new int[]{0});
+            medianVal = totalRows % 2 == 0 ? 0.5 * (tempFrame.vec(0).at(midRow - 1) +
+                    tempFrame.vec(0).at(midRow)) : tempFrame.vec(0).at(midRow);
+            tempFrame.delete();
+          }
+          myFrame.delete();
+          oneG._medians[index] = medianVal;
+        }
+      }
     }
   }
+
 }
